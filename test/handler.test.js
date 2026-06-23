@@ -85,3 +85,14 @@ test('Airtable failure returns 502', async () => {
     global.fetch = savedFetch;
   }
 });
+
+test('fetch throwing returns 502', async () => {
+  const savedFetch = global.fetch;
+  global.fetch = async () => { throw new Error('network fail'); };
+  try {
+    const res = await withEnv(ENV, () => handler({ httpMethod: 'POST', body: validBody() }));
+    assert.equal(res.statusCode, 502);
+  } finally {
+    global.fetch = savedFetch;
+  }
+});

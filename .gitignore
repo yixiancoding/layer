@@ -141,3 +141,10 @@ dist
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
+
+# Project-specific (Layer)
+.netlify/
+.DS_Store
+.superpowers/
+.playwright-mcp/
+deno.lock

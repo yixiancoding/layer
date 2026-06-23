@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Custom Eligibility Prototype</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 720px; margin: 0 auto;
+           padding: 40px 20px; line-height: 1.6; color: #111; }
+    section { margin: 0 0 80vh; }
+    h2 { margin-top: 0; }
+  </style>
+</head>
+<body>
+  <h1>Custom Eligibility Prototype</h1>
+  <p>Scroll through the steps. Use the feedback button (bottom-right) to comment.</p>
+
+  <section><h2>Step 1 — Overview</h2>
+    <p>This mock page exists to exercise the Layer widget locally.</p></section>
+  <section><h2>Step 2 — Eligibility results</h2>
+    <p>Scrolling here should change the captured Context (visible heading + scroll %).</p></section>
+  <section><h2>Step 3 — Confirmation</h2>
+    <p>The final step of the flow.</p></section>
+
+  <script
+    src="../widget/layer.js"
+    data-feedback-url="/.netlify/functions/submit-feedback">
+  </script>
+</body>
+</html>

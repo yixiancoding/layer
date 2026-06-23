@@ -67,3 +67,39 @@ test('parsePrototype: bare standalone path is unknown', () => {
 test('parsePrototype: garbage input is unknown', () => {
   assert.equal(parsePrototype('not a url'), 'unknown');
 });
+
+const { parseDevice, parseBrowser } = require('../netlify/functions/lib/parse');
+
+const UA_MAC_CHROME = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
+const UA_IPHONE_SAFARI = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1';
+const UA_WIN_EDGE = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36 Edg/124.0.0.0';
+const UA_ANDROID_FF = 'Mozilla/5.0 (Android 14; Mobile; rv:126.0) Gecko/126.0 Firefox/126.0';
+
+test('parseDevice: desktop mac', () => {
+  assert.equal(parseDevice(UA_MAC_CHROME), 'Desktop — macOS');
+});
+test('parseDevice: iphone is mobile iOS', () => {
+  assert.equal(parseDevice(UA_IPHONE_SAFARI), 'Mobile — iOS');
+});
+test('parseDevice: android mobile', () => {
+  assert.equal(parseDevice(UA_ANDROID_FF), 'Mobile — Android');
+});
+test('parseDevice: empty is unknown', () => {
+  assert.equal(parseDevice(''), 'unknown');
+});
+
+test('parseBrowser: chrome', () => {
+  assert.equal(parseBrowser(UA_MAC_CHROME), 'Chrome 124');
+});
+test('parseBrowser: edge wins over chrome token', () => {
+  assert.equal(parseBrowser(UA_WIN_EDGE), 'Edge 124');
+});
+test('parseBrowser: safari', () => {
+  assert.equal(parseBrowser(UA_IPHONE_SAFARI), 'Safari 17');
+});
+test('parseBrowser: firefox', () => {
+  assert.equal(parseBrowser(UA_ANDROID_FF), 'Firefox 126');
+});
+test('parseBrowser: empty is unknown', () => {
+  assert.equal(parseBrowser(''), 'unknown');
+});

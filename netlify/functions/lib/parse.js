@@ -30,4 +30,33 @@ function parsePrototype(pageUrl) {
   return segments[segments.length - 1];
 }
 
-module.exports = { parseDeployVersion, parsePrototype };
+function parseDevice(userAgent) {
+  const ua = userAgent || '';
+  if (!ua) return 'unknown';
+  const os =
+    /iPhone|iPad|iPod/.test(ua) ? 'iOS' :
+    /Android/.test(ua) ? 'Android' :
+    /Mac OS X|Macintosh/.test(ua) ? 'macOS' :
+    /Windows/.test(ua) ? 'Windows' :
+    /Linux/.test(ua) ? 'Linux' : 'unknown';
+  if (os === 'unknown') return 'unknown';
+  const form =
+    /iPad|Tablet/.test(ua) ? 'Tablet' :
+    /Mobi|iPhone|Android.*Mobile/.test(ua) ? 'Mobile' :
+    'Desktop';
+  return `${form} — ${os}`;
+}
+
+function parseBrowser(userAgent) {
+  const ua = userAgent || '';
+  if (!ua) return 'unknown';
+  let m;
+  if ((m = ua.match(/Edg\/(\d+)/))) return `Edge ${m[1]}`;
+  if ((m = ua.match(/OPR\/(\d+)/))) return `Opera ${m[1]}`;
+  if ((m = ua.match(/Firefox\/(\d+)/))) return `Firefox ${m[1]}`;
+  if ((m = ua.match(/Chrome\/(\d+)/))) return `Chrome ${m[1]}`;
+  if (/Safari/.test(ua) && (m = ua.match(/Version\/(\d+)/))) return `Safari ${m[1]}`;
+  return 'unknown';
+}
+
+module.exports = { parseDeployVersion, parsePrototype, parseDevice, parseBrowser };

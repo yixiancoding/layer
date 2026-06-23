@@ -103,3 +103,45 @@ test('parseBrowser: firefox', () => {
 test('parseBrowser: empty is unknown', () => {
   assert.equal(parseBrowser(''), 'unknown');
 });
+
+const { validate, buildFields } = require('../netlify/functions/lib/parse');
+
+test('validate: ok when name + comment present, no email', () => {
+  assert.deepEqual(validate({ name: 'Ada', comment: 'Looks good' }), []);
+});
+test('validate: missing name and comment', () => {
+  const errs = validate({ name: '  ', comment: '' });
+  assert.equal(errs.length, 2);
+});
+test('validate: bad email format', () => {
+  const errs = validate({ name: 'Ada', comment: 'x', email: 'nope' });
+  assert.equal(errs.length, 1);
+  assert.match(errs[0], /email/i);
+});
+test('validate: good email passes', () => {
+  assert.deepEqual(validate({ name: 'Ada', comment: 'x', email: 'ada@example.com' }), []);
+});
+
+test('buildFields: maps exact columns with injected timestamp', () => {
+  const body = {
+    name: ' Ada ',
+    email: 'ada@example.com',
+    comment: ' Nice ',
+    context: ' Home — Step 1 — scrolled 10% ',
+    pageUrl: 'https://deploy-preview-26--site.netlify.app/standalone/isa/proto-x',
+    userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+  };
+  const fields = buildFields(body, '2026-06-22T00:00:00.000Z');
+  assert.deepEqual(fields, {
+    'Timestamp': '2026-06-22T00:00:00.000Z',
+    'Name': 'Ada',
+    'Email': 'ada@example.com',
+    'Page URL': 'https://deploy-preview-26--site.netlify.app/standalone/isa/proto-x',
+    'Deploy Version': 'deploy-preview-26',
+    'Prototype': 'proto-x',
+    'Context': 'Home — Step 1 — scrolled 10%',
+    'Comment': 'Nice',
+    'Device': 'Desktop — macOS',
+    'Browser': 'Chrome 124',
+  });
+});

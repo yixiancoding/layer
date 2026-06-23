@@ -59,4 +59,36 @@ function parseBrowser(userAgent) {
   return 'unknown';
 }
 
-module.exports = { parseDeployVersion, parsePrototype, parseDevice, parseBrowser };
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function validate(body) {
+  const b = body || {};
+  const errors = [];
+  if (!String(b.name || '').trim()) errors.push('Name is required.');
+  if (!String(b.comment || '').trim()) errors.push('Comment is required.');
+  const email = String(b.email || '').trim();
+  if (email && !EMAIL_RE.test(email)) errors.push('Email is not valid.');
+  return errors;
+}
+
+function buildFields(body, nowIso) {
+  const b = body || {};
+  const pageUrl = String(b.pageUrl || '');
+  const userAgent = String(b.userAgent || '');
+  return {
+    'Timestamp': nowIso,
+    'Name': String(b.name || '').trim(),
+    'Email': String(b.email || '').trim(),
+    'Page URL': pageUrl,
+    'Deploy Version': parseDeployVersion(pageUrl),
+    'Prototype': parsePrototype(pageUrl),
+    'Context': String(b.context || '').trim(),
+    'Comment': String(b.comment || '').trim(),
+    'Device': parseDevice(userAgent),
+    'Browser': parseBrowser(userAgent),
+  };
+}
+
+module.exports = {
+  parseDeployVersion, parsePrototype, parseDevice, parseBrowser, validate, buildFields,
+};

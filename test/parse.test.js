@@ -54,3 +54,16 @@ test('parsePrototype: non-convention path falls back to last segment', () => {
 test('parsePrototype: root path is unknown', () => {
   assert.equal(parsePrototype('https://site.netlify.app/'), 'unknown');
 });
+
+test('parsePrototype: incomplete standalone path is unknown', () => {
+  assert.equal(parsePrototype('https://site.netlify.app/standalone/isa'), 'unknown');
+  assert.equal(parsePrototype('https://site.netlify.app/standalone/isa/'), 'unknown');
+});
+
+test('parsePrototype: bare standalone path is unknown', () => {
+  assert.equal(parsePrototype('https://site.netlify.app/standalone'), 'unknown');
+});
+
+test('parsePrototype: garbage input is unknown', () => {
+  assert.equal(parsePrototype('not a url'), 'unknown');
+});

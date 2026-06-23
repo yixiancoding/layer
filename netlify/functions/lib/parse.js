@@ -26,6 +26,7 @@ function parsePrototype(pageUrl) {
   }
   if (!segments.length) return 'unknown';
   if (segments[0] === 'standalone' && segments.length >= 3) return segments[2];
+  if (segments[0] === 'standalone') return 'unknown';
   return segments[segments.length - 1];
 }
 

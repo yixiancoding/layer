@@ -145,3 +145,12 @@ test('buildFields: maps exact columns with injected timestamp', () => {
     'Browser': 'Chrome 124',
   });
 });
+
+test('parseDeployVersion: 0.0.0.0 is local', () => {
+  assert.equal(parseDeployVersion('http://0.0.0.0:8888/'), 'local');
+});
+
+test('parseBrowser: opera', () => {
+  const ua = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36 OPR/110.0.0.0';
+  assert.equal(parseBrowser(ua), 'Opera 110');
+});

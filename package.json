@@ -1,0 +1,10 @@
+{
+  "name": "layer",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Lightweight feedback widget for live prototypes.",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "test": "node --test"
+  }
+}

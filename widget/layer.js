@@ -73,11 +73,11 @@
       '<section id="panel" role="dialog" aria-label="Leave feedback" hidden>' +
       '<header id="bar"><span>Leave feedback</span><button id="min" type="button" aria-label="Minimize">–</button></header>' +
       '<form id="form" novalidate>' +
-      '<label>Name<input id="name" type="text" autocomplete="name"></label>' +
+      '<label>Name<input id="name" type="text" autocomplete="name" aria-describedby="err-name"></label>' +
       '<div class="err" id="err-name"></div>' +
-      '<label>Email' + (REQUIRE_EMAIL ? '' : ' (optional)') + '<input id="email" type="email" autocomplete="email"></label>' +
+      '<label>Email' + (REQUIRE_EMAIL ? '' : ' (optional)') + '<input id="email" type="email" autocomplete="email" aria-describedby="err-email"></label>' +
       '<div class="err" id="err-email"></div>' +
-      '<label>Comment<textarea id="comment" rows="4"></textarea></label>' +
+      '<label>Comment<textarea id="comment" rows="4" aria-describedby="err-comment"></textarea></label>' +
       '<div class="err" id="err-comment"></div>' +
       '<button id="send" type="submit">Send</button>' +
       '<div id="status" role="status"></div>' +
@@ -144,6 +144,7 @@
       var r = panel.getBoundingClientRect();
       saveStore({ pos: { x: r.left, y: r.top } });
     });
+    bar.addEventListener('pointercancel', function () { drag = null; });
 
     function setErr(el, msg) { el.textContent = msg || ''; }
 

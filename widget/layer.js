@@ -249,6 +249,7 @@
 
         annOverlay.hidden = false;
         panel.hidden = true;
+        fab.style.visibility = 'hidden';
 
         // tool buttons
         var toolBtns = annOverlay.querySelectorAll('[data-tool]');
@@ -272,6 +273,7 @@
         function cleanup(resolveWith) {
           annOverlay.hidden = true;
           panel.hidden = false;
+          fab.style.visibility = '';
           resolve(resolveWith);
         }
 
@@ -301,7 +303,7 @@
             inp.style.position = 'fixed';
             inp.style.left = (e.clientX) + 'px';
             inp.style.top = (e.clientY - 20) + 'px';
-            inp.style.maxWidth = Math.max(120, window.innerWidth - e.clientX - 8) + 'px';
+            inp.style.maxWidth = Math.min(300, window.innerWidth - e.clientX - 8) + 'px';
             annOverlay.appendChild(inp);
             setTimeout(function () { inp.focus(); }, 0);
             inp.addEventListener('keydown', function (ke) {
@@ -416,9 +418,8 @@
             var nw = video.videoWidth;
             var nh = video.videoHeight;
             host.style.visibility = 'hidden';
-            return new Promise(function (resolve) {
-              requestAnimationFrame(function () { requestAnimationFrame(resolve); });
-            }).then(function () { return createImageBitmap(video); }).then(function (bitmap) {
+            return new Promise(function (resolve) { setTimeout(resolve, 300); })
+              .then(function () { return createImageBitmap(video); }).then(function (bitmap) {
               stream.getTracks().forEach(function (t) { t.stop(); });
               host.style.visibility = '';
               return openAnnotator(bitmap, nw, nh);

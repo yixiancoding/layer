@@ -67,6 +67,14 @@
       '#send:disabled{opacity:.6;cursor:default}' +
       '#status{font-size:12px;min-height:16px}' +
       '#status.ok{color:#166534}#status.bad{color:#b91c1c}' +
+      '#screenshot-btn{background:transparent;border:1px solid #d1d5db;border-radius:6px;padding:8px;font-size:12px;font-weight:600;color:#374151;cursor:pointer;text-align:left;width:100%}' +
+      '#screenshot-btn:hover{border-color:var(--layer-accent);color:var(--layer-accent)}' +
+      '#screenshot-btn:disabled{opacity:.5;cursor:default}' +
+      '#screenshot-preview{display:flex;align-items:center;gap:8px;font-size:11px;color:#374151}' +
+      '#screenshot-preview[hidden]{display:none}' +
+      '#screenshot-thumb{width:48px;height:36px;object-fit:cover;border-radius:4px;border:1px solid #e5e7eb}' +
+      '#screenshot-remove{background:transparent;border:none;color:#6b7280;cursor:pointer;padding:0;font-size:11px;text-decoration:underline}' +
+      '#screenshot-remove:hover{color:#b91c1c}' +
       '</style>' +
       '<button id="fab" aria-label="Leave feedback" title="Leave feedback">' +
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>' +
@@ -80,6 +88,11 @@
       '<div class="err" id="err-email"></div>' +
       '<label>Comment<textarea id="comment" rows="4" aria-describedby="err-comment"></textarea></label>' +
       '<div class="err" id="err-comment"></div>' +
+      '<button id="screenshot-btn" type="button">📷 Add screenshot</button>' +
+      '<div id="screenshot-preview" hidden>' +
+      '<img id="screenshot-thumb" src="" alt="Screenshot preview">' +
+      '<span>Screenshot attached ✓ · <button id="screenshot-remove" type="button">Remove</button></span>' +
+      '</div>' +
       '<button id="send" type="submit">Send</button>' +
       '<div id="status" role="status"></div>' +
       '</form></section>';
@@ -97,6 +110,48 @@
     var errName = root.getElementById('err-name');
     var errEmail = root.getElementById('err-email');
     var errComment = root.getElementById('err-comment');
+    var screenshotBtn = root.getElementById('screenshot-btn');
+    var screenshotPreview = root.getElementById('screenshot-preview');
+    var screenshotThumb = root.getElementById('screenshot-thumb');
+    var screenshotRemove = root.getElementById('screenshot-remove');
+    var heldScreenshot = null;
+
+    // read config
+    var SCREENSHOTS_ENABLED = !script || script.getAttribute('data-screenshots') !== 'false';
+    if (!SCREENSHOTS_ENABLED) screenshotBtn.hidden = true;
+
+    function setHeldScreenshot(dataUrl) {
+      heldScreenshot = dataUrl;
+      if (dataUrl) {
+        screenshotThumb.src = dataUrl;
+        screenshotPreview.hidden = false;
+        screenshotBtn.hidden = true;
+      } else {
+        screenshotThumb.src = '';
+        screenshotPreview.hidden = true;
+        screenshotBtn.hidden = !SCREENSHOTS_ENABLED;
+      }
+    }
+
+    function getScreenshot() {
+      // stub — replaced in Task 4
+      return Promise.resolve(null);
+    }
+
+    screenshotBtn.addEventListener('click', function () {
+      screenshotBtn.disabled = true;
+      getScreenshot().then(function (dataUrl) {
+        if (dataUrl) setHeldScreenshot(dataUrl);
+      }).catch(function () {
+        // user cancelled or unsupported — no-op
+      }).finally(function () {
+        screenshotBtn.disabled = false;
+      });
+    });
+
+    screenshotRemove.addEventListener('click', function () {
+      setHeldScreenshot(null);
+    });
 
     function restorePosition(pos) {
       if (!pos) return;
@@ -173,6 +228,8 @@
         userAgent: navigator.userAgent,
         context: captureContext()
       };
+      if (heldScreenshot) payload.screenshot = heldScreenshot;
+      var screenshotWasSent = !!heldScreenshot;
 
       var label = send.textContent;
       send.disabled = true; send.textContent = 'Sending…';
@@ -182,10 +239,17 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       }).then(function (res) {
-        if (!res.ok) throw new Error('bad status ' + res.status);
+        return res.ok ? res.json() : Promise.reject(new Error('bad status ' + res.status));
+      }).then(function (data) {
         saveStore({ name: payload.name, email: payload.email });
         commentEl.value = '';
-        statusEl.textContent = 'Sent ✓'; statusEl.className = 'ok';
+        setHeldScreenshot(null);
+        if (screenshotWasSent && data && data.screenshotAttached === false) {
+          statusEl.textContent = 'Comment saved — screenshot couldn\'t attach.';
+          statusEl.className = 'ok';
+        } else {
+          statusEl.textContent = 'Sent ✓'; statusEl.className = 'ok';
+        }
         setTimeout(function () {
           if (statusEl.className === 'ok') { statusEl.textContent = ''; statusEl.className = ''; }
         }, 2000);

@@ -135,6 +135,7 @@
       '<h3>Add a screenshot</h3>' +
       '<p>Take a screenshot now:</p>' +
       '<p class="hint" id="upload-hint"></p>' +
+      '<p>It saves to your Photos.</p>' +
       '<p>Then attach it below.</p>' +
       '<button id="choose-file-btn">Choose screenshot</button>' +
       '<input id="upload-file-input" type="file" accept="image/*" style="display:none">' +
@@ -253,11 +254,11 @@
         var toolBtns = annOverlay.querySelectorAll('[data-tool]');
         for (var i = 0; i < toolBtns.length; i++) {
           (function (btn) {
-            btn.addEventListener('click', function () {
+            btn.onclick = function () {
               activeTool = btn.getAttribute('data-tool');
               for (var k = 0; k < toolBtns.length; k++) toolBtns[k].classList.remove('active');
               btn.classList.add('active');
-            });
+            };
           })(toolBtns[i]);
         }
 

@@ -242,12 +242,12 @@
           })(toolBtns[i]);
         }
 
-        annUndo.addEventListener('click', function onUndo() {
+        annUndo.onclick = function () {
           shapes.pop(); redraw();
-        });
-        annClear.addEventListener('click', function onClear() {
+        };
+        annClear.onclick = function () {
           shapes = []; redraw();
-        });
+        };
 
         function cleanup(resolveWith) {
           annOverlay.hidden = true;

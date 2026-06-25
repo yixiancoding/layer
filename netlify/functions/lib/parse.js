@@ -89,6 +89,18 @@ function buildFields(body, nowIso) {
   };
 }
 
+var ALLOWED_IMAGE_TYPES = { 'image/jpeg': 'screenshot.jpg', 'image/png': 'screenshot.png' };
+
+function parseDataUrl(dataUrl) {
+  if (!dataUrl || typeof dataUrl !== 'string') return null;
+  var m = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
+  if (!m) return null;
+  var contentType = m[1];
+  var filename = ALLOWED_IMAGE_TYPES[contentType];
+  if (!filename) return null;
+  return { contentType: contentType, base64: m[2], filename: filename };
+}
+
 module.exports = {
-  parseDeployVersion, parsePrototype, parseDevice, parseBrowser, validate, buildFields,
+  parseDeployVersion, parsePrototype, parseDevice, parseBrowser, validate, buildFields, parseDataUrl,
 };

@@ -154,3 +154,39 @@ test('parseBrowser: opera', () => {
   const ua = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36 OPR/110.0.0.0';
   assert.equal(parseBrowser(ua), 'Opera 110');
 });
+
+const { parseDataUrl } = require('../netlify/functions/lib/parse');
+
+test('parseDataUrl: valid image/jpeg', () => {
+  const result = parseDataUrl('data:image/jpeg;base64,/9j/abc123==');
+  assert.deepEqual(result, { contentType: 'image/jpeg', base64: '/9j/abc123==', filename: 'screenshot.jpg' });
+});
+
+test('parseDataUrl: valid image/png', () => {
+  const result = parseDataUrl('data:image/png;base64,iVBORw0KGgo=');
+  assert.deepEqual(result, { contentType: 'image/png', base64: 'iVBORw0KGgo=', filename: 'screenshot.png' });
+});
+
+test('parseDataUrl: plain string returns null', () => {
+  assert.equal(parseDataUrl('hello world'), null);
+});
+
+test('parseDataUrl: non-image data URL returns null', () => {
+  assert.equal(parseDataUrl('data:text/plain;base64,aGVsbG8='), null);
+});
+
+test('parseDataUrl: disallowed type (image/gif) returns null', () => {
+  assert.equal(parseDataUrl('data:image/gif;base64,R0lGOD'), null);
+});
+
+test('parseDataUrl: missing base64 marker returns null', () => {
+  assert.equal(parseDataUrl('data:image/jpeg,/9j/abc'), null);
+});
+
+test('parseDataUrl: empty string returns null', () => {
+  assert.equal(parseDataUrl(''), null);
+});
+
+test('parseDataUrl: null input returns null', () => {
+  assert.equal(parseDataUrl(null), null);
+});

@@ -17,6 +17,7 @@
    | Comment        | Long text         |
    | Device         | Single line text  |
    | Browser        | Single line text  |
+   | Screenshot     | Attachment        |
 
    Field names must match exactly — the function maps to them by name.
 
@@ -83,3 +84,27 @@ Make email required for client-facing deploys:
   data-require-email="true">
 </script>
 ```
+
+## 7. Optional: attach screenshots to feedback
+
+The widget can capture and attach screenshots to Airtable records. To enable:
+
+1. **Get the Screenshot field id:**
+   - Open your Airtable base's API documentation page
+     (https://airtable.com/developers/web/api/introduction, select your base).
+   - Find the **Screenshot** row in the fields table.
+   - Copy the field id (starts with `fld`, e.g. `fldXXXXXXXXXXXXXX`).
+
+2. **Add to `.env`:**
+
+   ```dotenv
+   AIRTABLE_SCREENSHOT_FIELD_ID=fldXXXXXXXXXXXXXX
+   ```
+
+3. **Add to Netlify (production):**
+   - In the Netlify UI, go to **Site settings → Environment variables**.
+   - Add `AIRTABLE_SCREENSHOT_FIELD_ID` with the same value as above.
+
+4. **If omitted:**
+   - Feedback still works and screenshots are sent by the widget, but they are not
+     attached to the Airtable record. The row is created without the attachment.

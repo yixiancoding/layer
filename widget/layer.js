@@ -87,6 +87,14 @@
       '#ann-canvas-wrap{flex:1;display:flex;align-items:center;justify-content:center;overflow:hidden;padding:8px}' +
       '#ann-canvas{cursor:crosshair;touch-action:none;display:block;max-width:100%;max-height:100%}' +
       '#ann-text-input{position:fixed;background:rgba(0,0,0,.7);border:none;border-bottom:2px solid var(--layer-accent);color:#fff;font-size:14px;padding:2px 4px;outline:none;min-width:120px}' +
+      '#upload-sheet{position:fixed;inset:0;z-index:9998;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center}' +
+      '#upload-sheet[hidden]{display:none}' +
+      '#upload-card{background:#fff;border-radius:12px;padding:24px;max-width:300px;width:90%;display:flex;flex-direction:column;gap:16px;text-align:center}' +
+      '#upload-card h3{margin:0;font-size:15px;font-weight:700;color:#111827}' +
+      '#upload-card p{margin:0;font-size:13px;color:#374151}' +
+      '#upload-card .hint{font-weight:700;font-size:14px;color:var(--layer-accent)}' +
+      '#choose-file-btn{background:var(--layer-accent);color:#fff;border:none;border-radius:8px;padding:12px;font-size:14px;font-weight:600;cursor:pointer}' +
+      '#upload-cancel-btn{background:transparent;border:none;color:#6b7280;font-size:12px;cursor:pointer;text-decoration:underline}' +
       '</style>' +
       '<button id="fab" aria-label="Leave feedback" title="Leave feedback">' +
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>' +
@@ -121,6 +129,17 @@
       '<button id="ann-attach">Attach</button>' +
       '</div>' +
       '<div id="ann-canvas-wrap"><canvas id="ann-canvas"></canvas></div>' +
+      '</div>' +
+      '<div id="upload-sheet" hidden>' +
+      '<div id="upload-card">' +
+      '<h3>Add a screenshot</h3>' +
+      '<p>Take a screenshot now:</p>' +
+      '<p class="hint" id="upload-hint"></p>' +
+      '<p>Then attach it below.</p>' +
+      '<button id="choose-file-btn">Choose screenshot</button>' +
+      '<input id="upload-file-input" type="file" accept="image/*" style="display:none">' +
+      '<button id="upload-cancel-btn">Cancel</button>' +
+      '</div>' +
       '</div>';
 
     var fab = root.getElementById('fab');
@@ -325,6 +344,62 @@
       });
     }
 
+    var uploadSheet = root.getElementById('upload-sheet');
+    var uploadHint = root.getElementById('upload-hint');
+    var chooseFileBtn = root.getElementById('choose-file-btn');
+    var uploadFileInput = root.getElementById('upload-file-input');
+    var uploadCancelBtn = root.getElementById('upload-cancel-btn');
+
+    function deviceHint() {
+      var ua = navigator.userAgent || '';
+      if (/iPhone|iPad|iPod/.test(ua)) return 'Side button + Volume Up';
+      if (/Android/.test(ua)) return 'Power + Volume Down';
+      return 'Use your OS screenshot shortcut';
+    }
+
+    function toJpegDataUrl(file, callback) {
+      var reader = new FileReader();
+      reader.onload = function (e) {
+        var img = new Image();
+        img.onload = function () {
+          var scale = capScale(img.naturalWidth, img.naturalHeight);
+          var c = document.createElement('canvas');
+          c.width = Math.round(img.naturalWidth * scale);
+          c.height = Math.round(img.naturalHeight * scale);
+          c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+          callback(c.toDataURL('image/jpeg', 0.85));
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function openUploadSheet() {
+      return new Promise(function (resolve) {
+        uploadHint.textContent = deviceHint();
+        uploadSheet.hidden = false;
+        panel.hidden = true;
+
+        function done(result) {
+          uploadSheet.hidden = true;
+          panel.hidden = false;
+          // reset input so the same file can be re-selected
+          uploadFileInput.value = '';
+          resolve(result);
+        }
+
+        uploadCancelBtn.onclick = function () { done(null); };
+
+        chooseFileBtn.onclick = function () { uploadFileInput.click(); };
+
+        uploadFileInput.onchange = function () {
+          var file = uploadFileInput.files && uploadFileInput.files[0];
+          if (!file) { done(null); return; }
+          toJpegDataUrl(file, function (dataUrl) { done(dataUrl); });
+        };
+      });
+    }
+
     function getScreenshot() {
       if (navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia) {
         return navigator.mediaDevices.getDisplayMedia({
@@ -350,8 +425,8 @@
           return null;
         });
       }
-      // upload path — implemented in Task 5
-      return Promise.resolve(null);
+      // upload path for iOS / unsupported browsers
+      return openUploadSheet();
     }
 
     screenshotBtn.addEventListener('click', function () {

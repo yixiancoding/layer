@@ -75,6 +75,18 @@
       '#screenshot-thumb{width:48px;height:36px;object-fit:cover;border-radius:4px;border:1px solid #e5e7eb}' +
       '#screenshot-remove{background:transparent;border:none;color:#6b7280;cursor:pointer;padding:0;font-size:11px;text-decoration:underline}' +
       '#screenshot-remove:hover{color:#b91c1c}' +
+      '#annotator-overlay{position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.7);display:flex;flex-direction:column;align-items:stretch}' +
+      '#annotator-overlay[hidden]{display:none}' +
+      '#annotator-toolbar{display:flex;gap:6px;padding:8px 12px;background:#1f2937;flex-wrap:wrap;align-items:center}' +
+      '.ann-tool{background:#374151;border:1px solid #4b5563;color:#f9fafb;border-radius:5px;padding:5px 10px;font-size:12px;cursor:pointer}' +
+      '.ann-tool.active{background:var(--layer-accent);border-color:var(--layer-accent);color:#fff}' +
+      '.ann-tool:hover:not(.active){background:#4b5563}' +
+      '#ann-spacer{flex:1}' +
+      '#ann-cancel{background:#374151;border:1px solid #6b7280;color:#f9fafb;border-radius:5px;padding:5px 10px;font-size:12px;cursor:pointer}' +
+      '#ann-attach{background:var(--layer-accent);border:none;color:#fff;border-radius:5px;padding:5px 14px;font-size:12px;font-weight:600;cursor:pointer}' +
+      '#ann-canvas-wrap{flex:1;display:flex;align-items:center;justify-content:center;overflow:hidden;padding:8px}' +
+      '#ann-canvas{cursor:crosshair;touch-action:none;display:block;max-width:100%;max-height:100%}' +
+      '#ann-text-input{position:fixed;background:rgba(0,0,0,.7);border:none;border-bottom:2px solid var(--layer-accent);color:#fff;font-size:14px;padding:2px 4px;outline:none;min-width:120px}' +
       '</style>' +
       '<button id="fab" aria-label="Leave feedback" title="Leave feedback">' +
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>' +
@@ -95,7 +107,21 @@
       '</div>' +
       '<button id="send" type="submit">Send</button>' +
       '<div id="status" role="status"></div>' +
-      '</form></section>';
+      '</form></section>' +
+      '<div id="annotator-overlay" hidden>' +
+      '<div id="annotator-toolbar">' +
+      '<button class="ann-tool active" data-tool="box">Box</button>' +
+      '<button class="ann-tool" data-tool="arrow">Arrow</button>' +
+      '<button class="ann-tool" data-tool="draw">Freehand</button>' +
+      '<button class="ann-tool" data-tool="text">Text</button>' +
+      '<button class="ann-tool" id="ann-undo">Undo</button>' +
+      '<button class="ann-tool" id="ann-clear">Clear</button>' +
+      '<span id="ann-spacer"></span>' +
+      '<button id="ann-cancel">Cancel</button>' +
+      '<button id="ann-attach">Attach</button>' +
+      '</div>' +
+      '<div id="ann-canvas-wrap"><canvas id="ann-canvas"></canvas></div>' +
+      '</div>';
 
     var fab = root.getElementById('fab');
     var panel = root.getElementById('panel');
@@ -133,8 +159,198 @@
       }
     }
 
+    var annOverlay = root.getElementById('annotator-overlay');
+    var annCanvas = root.getElementById('ann-canvas');
+    var annCancel = root.getElementById('ann-cancel');
+    var annAttach = root.getElementById('ann-attach');
+    var annUndo = root.getElementById('ann-undo');
+    var annClear = root.getElementById('ann-clear');
+
+    var ACCENT = '#FB35CF';
+    var MAX_LONG_EDGE = 1600;
+
+    function capScale(nw, nh) {
+      var maxE = Math.max(nw, nh);
+      return maxE > MAX_LONG_EDGE ? MAX_LONG_EDGE / maxE : 1;
+    }
+
+    function drawShapes(ctx, shapes, cw, ch) {
+      ctx.strokeStyle = ACCENT;
+      ctx.fillStyle = ACCENT;
+      ctx.lineWidth = 2;
+      for (var i = 0; i < shapes.length; i++) {
+        var s = shapes[i];
+        if (s.type === 'box') {
+          ctx.beginPath();
+          ctx.rect(s.x * cw, s.y * ch, s.w * cw, s.h * ch);
+          ctx.stroke();
+        } else if (s.type === 'arrow') {
+          var x1 = s.x1 * cw, y1 = s.y1 * ch, x2 = s.x2 * cw, y2 = s.y2 * ch;
+          ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+          var angle = Math.atan2(y2 - y1, x2 - x1);
+          var headLen = 10;
+          ctx.beginPath();
+          ctx.moveTo(x2, y2);
+          ctx.lineTo(x2 - headLen * Math.cos(angle - Math.PI / 6), y2 - headLen * Math.sin(angle - Math.PI / 6));
+          ctx.lineTo(x2 - headLen * Math.cos(angle + Math.PI / 6), y2 - headLen * Math.sin(angle + Math.PI / 6));
+          ctx.closePath(); ctx.fill();
+        } else if (s.type === 'draw') {
+          if (!s.points.length) continue;
+          ctx.beginPath(); ctx.moveTo(s.points[0][0] * cw, s.points[0][1] * ch);
+          for (var j = 1; j < s.points.length; j++) ctx.lineTo(s.points[j][0] * cw, s.points[j][1] * ch);
+          ctx.stroke();
+        } else if (s.type === 'text') {
+          ctx.font = '14px -apple-system,BlinkMacSystemFont,sans-serif';
+          ctx.fillText(s.text, s.x * cw, s.y * ch);
+        }
+      }
+    }
+
+    function openAnnotator(bitmap, nw, nh) {
+      return new Promise(function (resolve) {
+        var shapes = [];
+        var activeTool = 'box';
+        var drawing = null;
+        var ctx = annCanvas.getContext('2d');
+
+        // fit canvas to viewport
+        var wrap = root.getElementById('ann-canvas-wrap');
+        var maxW = wrap.clientWidth || window.innerWidth - 24;
+        var maxH = wrap.clientHeight || window.innerHeight - 60;
+        var scaleToView = Math.min(maxW / nw, maxH / nh, 1);
+        annCanvas.width = Math.round(nw * scaleToView);
+        annCanvas.height = Math.round(nh * scaleToView);
+
+        function redraw() {
+          ctx.drawImage(bitmap, 0, 0, annCanvas.width, annCanvas.height);
+          drawShapes(ctx, shapes, annCanvas.width, annCanvas.height);
+        }
+        redraw();
+
+        annOverlay.hidden = false;
+        panel.hidden = true;
+
+        // tool buttons
+        var toolBtns = annOverlay.querySelectorAll('[data-tool]');
+        for (var i = 0; i < toolBtns.length; i++) {
+          (function (btn) {
+            btn.addEventListener('click', function () {
+              activeTool = btn.getAttribute('data-tool');
+              for (var k = 0; k < toolBtns.length; k++) toolBtns[k].classList.remove('active');
+              btn.classList.add('active');
+            });
+          })(toolBtns[i]);
+        }
+
+        annUndo.addEventListener('click', function onUndo() {
+          shapes.pop(); redraw();
+        });
+        annClear.addEventListener('click', function onClear() {
+          shapes = []; redraw();
+        });
+
+        function cleanup(resolveWith) {
+          annOverlay.hidden = true;
+          panel.hidden = false;
+          resolve(resolveWith);
+        }
+
+        annCancel.onclick = function () { cleanup(null); };
+
+        annAttach.onclick = function () {
+          var scale = capScale(nw, nh);
+          var outW = Math.round(nw * scale);
+          var outH = Math.round(nh * scale);
+          var out = document.createElement('canvas');
+          out.width = outW; out.height = outH;
+          var outCtx = out.getContext('2d');
+          outCtx.drawImage(bitmap, 0, 0, outW, outH);
+          drawShapes(outCtx, shapes, outW, outH);
+          var dataUrl = out.toDataURL('image/jpeg', 0.85);
+          cleanup(dataUrl);
+        };
+
+        // pointer events for drawing
+        annCanvas.addEventListener('pointerdown', function (e) {
+          var r = annCanvas.getBoundingClientRect();
+          var px = (e.clientX - r.left) / annCanvas.width;
+          var py = (e.clientY - r.top) / annCanvas.height;
+          if (activeTool === 'text') {
+            var inp = document.createElement('input');
+            inp.id = 'ann-text-input';
+            inp.style.left = (e.clientX) + 'px';
+            inp.style.top = (e.clientY - 20) + 'px';
+            annOverlay.appendChild(inp);
+            inp.focus();
+            inp.addEventListener('keydown', function (ke) {
+              if (ke.key === 'Enter') inp.blur();
+            });
+            inp.addEventListener('blur', function () {
+              if (inp.value.trim()) shapes.push({ type: 'text', x: px, y: py, text: inp.value.trim() });
+              inp.remove();
+              redraw();
+            });
+            return;
+          }
+          if (activeTool === 'box') {
+            drawing = { type: 'box', x: px, y: py, w: 0, h: 0 };
+          } else if (activeTool === 'arrow') {
+            drawing = { type: 'arrow', x1: px, y1: py, x2: px, y2: py };
+          } else if (activeTool === 'draw') {
+            drawing = { type: 'draw', points: [[px, py]] };
+          }
+          try { annCanvas.setPointerCapture(e.pointerId); } catch (err) {}
+        });
+
+        annCanvas.addEventListener('pointermove', function (e) {
+          if (!drawing) return;
+          var r = annCanvas.getBoundingClientRect();
+          var px = (e.clientX - r.left) / annCanvas.width;
+          var py = (e.clientY - r.top) / annCanvas.height;
+          if (drawing.type === 'box') { drawing.w = px - drawing.x; drawing.h = py - drawing.y; }
+          else if (drawing.type === 'arrow') { drawing.x2 = px; drawing.y2 = py; }
+          else if (drawing.type === 'draw') { drawing.points.push([px, py]); }
+          redraw();
+          drawShapes(ctx, [drawing], annCanvas.width, annCanvas.height);
+        });
+
+        annCanvas.addEventListener('pointerup', function () {
+          if (!drawing) return;
+          shapes.push(drawing);
+          drawing = null;
+          redraw();
+        });
+
+        annCanvas.addEventListener('pointercancel', function () { drawing = null; redraw(); });
+      });
+    }
+
     function getScreenshot() {
-      // stub — replaced in Task 4
+      if (navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia) {
+        return navigator.mediaDevices.getDisplayMedia({
+          video: { preferCurrentTab: true },
+          preferCurrentTab: true,
+        }).then(function (stream) {
+          var video = document.createElement('video');
+          video.srcObject = stream;
+          video.muted = true;
+          return video.play().then(function () {
+            var nw = video.videoWidth;
+            var nh = video.videoHeight;
+            host.style.visibility = 'hidden';
+            return createImageBitmap(video).then(function (bitmap) {
+              stream.getTracks().forEach(function (t) { t.stop(); });
+              host.style.visibility = '';
+              return openAnnotator(bitmap, nw, nh);
+            });
+          });
+        }).catch(function (err) {
+          host.style.visibility = '';
+          if (err && err.name === 'NotAllowedError') return null;
+          return null;
+        });
+      }
+      // upload path — implemented in Task 5
       return Promise.resolve(null);
     }
 

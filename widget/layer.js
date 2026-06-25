@@ -301,6 +301,7 @@
             inp.style.position = 'fixed';
             inp.style.left = (e.clientX) + 'px';
             inp.style.top = (e.clientY - 20) + 'px';
+            inp.style.maxWidth = Math.max(120, window.innerWidth - e.clientX - 8) + 'px';
             annOverlay.appendChild(inp);
             setTimeout(function () { inp.focus(); }, 0);
             inp.addEventListener('keydown', function (ke) {

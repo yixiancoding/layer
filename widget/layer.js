@@ -298,10 +298,11 @@
           if (activeTool === 'text') {
             var inp = document.createElement('input');
             inp.id = 'ann-text-input';
+            inp.style.position = 'fixed';
             inp.style.left = (e.clientX) + 'px';
             inp.style.top = (e.clientY - 20) + 'px';
             annOverlay.appendChild(inp);
-            inp.focus();
+            setTimeout(function () { inp.focus(); }, 0);
             inp.addEventListener('keydown', function (ke) {
               if (ke.key === 'Enter') inp.blur();
             });
@@ -414,7 +415,9 @@
             var nw = video.videoWidth;
             var nh = video.videoHeight;
             host.style.visibility = 'hidden';
-            return createImageBitmap(video).then(function (bitmap) {
+            return new Promise(function (resolve) {
+              requestAnimationFrame(function () { requestAnimationFrame(resolve); });
+            }).then(function () { return createImageBitmap(video); }).then(function (bitmap) {
               stream.getTracks().forEach(function (t) { t.stop(); });
               host.style.visibility = '';
               return openAnnotator(bitmap, nw, nh);
